@@ -13,7 +13,7 @@ class PointsMaterial extends RawShaderMaterial {
 
         this.uniforms.size = new Uniform(this.size);
         this.uniforms.pickingMode = new Uniform(false);
-        this.uniforms.opacity = new Uniform(1.0);
+        this.uniforms.opacity = new Uniform(this.opacity);
         this.uniforms.overlayColor = new Uniform(new Vector4(0, 0, 0, 0));
 
         if (Capabilities.isLogDepthBufferSupported()) {
@@ -39,6 +39,7 @@ class PointsMaterial extends RawShaderMaterial {
     updateUniforms() {
         // if size is null, switch to autosizing using the canvas height
         this.uniforms.size.value = (this.size > 0) ? this.size : -this.scale * window.innerHeight;
+        this.uniforms.opacity.value = this.opacity;
     }
 }
 

@@ -182,6 +182,14 @@
                     pointcloud.protocol = 'potreeconverter';
                     pointcloud.url = serverUrl;
                     pointcloud.table = lopocsTable;
+                    if (new URL(window.location.href).searchParams.get('material') === 'three') {
+                        pointcloud.material = new itowns.THREE.PointsMaterial({
+                            color: 0xff8888,
+                            sizeAttenuation: false,
+                            size: 1,
+                            vertexColors: itowns.THREE.VertexColors
+                        });
+                    }
 
                     // point selection on double-click
                     function dblClickHandler(event) {
