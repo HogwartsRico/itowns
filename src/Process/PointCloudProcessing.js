@@ -68,10 +68,10 @@ function computeScreenSpaceError(context, layer, elt, distance) {
 
 function markForDeletion(elt) {
     if (elt.obj) {
-        elt.obj.material.visible = false;
+        elt.obj.visible = false;
         if (__DEBUG__) {
             if (elt.obj.boxHelper) {
-                elt.obj.boxHelper.material.visible = false;
+                elt.obj.boxHelper.visible = false;
             }
         }
     }
@@ -93,12 +93,16 @@ export default {
             return [];
         }
 
+
         // See https://cesiumjs.org/hosted-apps/massiveworlds/downloads/Ring/WorldScaleTerrainRendering.pptx
         // slide 17
         context.camera.preSSE =
             context.camera.height /
                 (2 * Math.tan(THREE.Math.degToRad(context.camera.camera3D.fov) * 0.5));
 
+        if (layer.material) {
+            layer.material.size = layer.pointSize;
+        }
 
         if (changeSources.has(undefined) || changeSources.size == 0) {
             return [layer.root];
@@ -163,8 +167,7 @@ export default {
         // only load geometry if this elements has points
         if (elt.numPoints > 0) {
             if (elt.obj) {
-                elt.obj.material.visible = true;
-                elt.obj.material.size = layer.pointSize;
+                elt.obj.visible = true;
 
                 if (__DEBUG__) {
                     if (layer.bboxes.visible) {
@@ -232,7 +235,7 @@ export default {
 
         layer.displayedCount = 0;
         for (const pts of layer.group.children) {
-            if (pts.material.visible) {
+            if (pts.visible) {
                 const count = pts.geometry.attributes.position.count;
                 pts.geometry.setDrawRange(0, count);
                 layer.displayedCount += count;
@@ -247,12 +250,12 @@ export default {
                 // representation
                 const reduction = layer.pointBudget / layer.displayedCount;
                 for (const pts of layer.group.children) {
-                    if (pts.material.visible) {
+                    if (pts.visible) {
                         const count = Math.floor(pts.geometry.drawRange.count * reduction);
                         if (count > 0) {
                             pts.geometry.setDrawRange(0, count);
                         } else {
-                            pts.material.visible = false;
+                            pts.visible = false;
                         }
                     }
                 }
@@ -268,7 +271,7 @@ export default {
                 for (const pts of layer.group.children) {
                     const count = pts.geometry.attributes.position.count;
                     if (limitHit || (layer.displayedCount + count) > layer.pointBudget) {
-                        pts.material.visible = false;
+                        pts.visible = false;
                         limitHit = true;
                     } else {
                         layer.displayedCount += count;
@@ -280,11 +283,11 @@ export default {
         const now = Date.now();
         for (let i = layer.group.children.length - 1; i >= 0; i--) {
             const obj = layer.group.children[i];
-            if (!obj.material.visible && (now - obj.owner.notVisibleSince) > 10000) {
+            if (!obj.visible && (now - obj.owner.notVisibleSince) > 10000) {
                 // remove from group
                 layer.group.children.splice(i, 1);
 
-                obj.material.dispose();
+                // no need to dispose obj.material, as it is shared by all objects of this layer
                 obj.geometry.dispose();
                 obj.material = null;
                 obj.geometry = null;
