@@ -254,6 +254,9 @@ export default {
             points.tightbbox.translate(node.bbox.min);
             points.material.transparent = layer.opacity < 1.0;
             points.material.opacity = layer.opacity;
+            if (points.material.refreshUniforms) {
+                points.onBeforeRender = points.material.refreshUniforms.bind(points.material);
+            }
             points.updateMatrix();
             points.layers.set(layer.threejsLayer);
             points.layer = layer.id;

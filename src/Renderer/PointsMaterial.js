@@ -26,8 +26,7 @@ class PointsMaterial extends RawShaderMaterial {
         if (__DEBUG__) {
             this.defines.DEBUG = 1;
         }
-
-        this.updateUniforms();
+        this.refreshUniforms();
     }
 
     enablePicking(pickingMode) {
@@ -36,7 +35,7 @@ class PointsMaterial extends RawShaderMaterial {
         this.uniforms.pickingMode.value = pickingMode;
     }
 
-    updateUniforms() {
+    refreshUniforms(/* renderer, scene, camera, geometry, material, group */) {
         // if size is null, switch to autosizing using the canvas height
         this.uniforms.size.value = (this.size > 0) ? this.size : -this.scale * window.innerHeight;
         this.uniforms.opacity.value = this.opacity;
