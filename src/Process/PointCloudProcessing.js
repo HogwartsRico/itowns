@@ -99,9 +99,11 @@ export default {
             context.camera.height /
                 (2 * Math.tan(THREE.Math.degToRad(context.camera.camera3D.fov) * 0.5));
 
-        layer.material.opacity = layer.opacity;
-        layer.material.transparent = layer.opacity < 1;
-        layer.material.size = layer.pointSize;
+        if (layer.material) {
+            layer.material.opacity = layer.opacity;
+            layer.material.transparent = layer.opacity < 1;
+            layer.material.size = layer.pointSize;
+        }
 
         if (changeSources.has(undefined) || changeSources.size == 0) {
             return [layer.root];
