@@ -158,7 +158,8 @@ export default {
         layer.pointSize = layer.pointSize === 0 || !isNaN(layer.pointSize) ? layer.pointSize : 4;
         layer.sseThreshold = layer.sseThreshold || 2;
         layer.type = 'geometry';
-        layer.material = layer.material || new PointsMaterial();
+        layer.material = layer.material || {};
+        layer.material = layer.material.isMaterial ? layer.material : new PointsMaterial(layer.material);
 
         // default update methods
         layer.preUpdate = PointCloudProcessing.preUpdate;
@@ -241,23 +242,10 @@ export default {
             addPickingAttribute(points);
             points.frustumCulled = false;
             points.matrixAutoUpdate = false;
-            points.tightbbox = geometry.boundingBox;
-
             points.position.copy(node.bbox.min);
             points.scale.set(layer.metadata.scale, layer.metadata.scale, layer.metadata.scale);
-            points.tightbbox.min.x *= layer.metadata.scale;
-            points.tightbbox.min.y *= layer.metadata.scale;
-            points.tightbbox.min.z *= layer.metadata.scale;
-            points.tightbbox.max.x *= layer.metadata.scale;
-            points.tightbbox.max.y *= layer.metadata.scale;
-            points.tightbbox.max.z *= layer.metadata.scale;
-            points.tightbbox.translate(node.bbox.min);
-            points.material.transparent = layer.opacity < 1.0;
-            points.material.opacity = layer.opacity;
-            if (points.material.refreshUniforms) {
-                points.onBeforeRender = points.material.refreshUniforms.bind(points.material);
-            }
             points.updateMatrix();
+            points.tightbbox = geometry.boundingBox.applyMatrix4(points.matrix);
             points.layers.set(layer.threejsLayer);
             points.layer = layer.id;
             return points;
