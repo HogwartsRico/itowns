@@ -77,7 +77,7 @@ globeView.addLayer({
     // typeName: 'tcl_sytral.tcllignebus',
     level: 16,
     crs: 'EPSG:2154',
-    orientationType: 'Stereopolis2',
+    // orientationType: 'Stereopolis2',
     view: globeView,
     crsOut: globeView.referenceCrs,
     format: 'geojson',
