@@ -35,12 +35,14 @@ function parseCalibration(calibration, options) {
 
     var position = new THREE.Vector3().fromArray(calibration.position);
     var rotation = new THREE.Matrix3().fromArray(calibration.rotation).transpose();
-    if (options.orientationType === 'Stereopolis2') {
-        rotation.multiply(new THREE.Matrix3().set(
-            0, 1, 0,
-            -1, 0, 0,
-            0, 0, 1));
-    }
+    // console.log('rotation avant: ', rotation.clone().transpose());
+    // if (options.orientationType === 'Stereopolis2') {
+    //     rotation.multiply(new THREE.Matrix3().set(
+    //         0, 1, 0,
+    //         -1, 0, 0,
+    //         0, 0, 1));
+    // }
+    // console.log('rotation apres: ', rotation.clone().transpose());
     camera.matrix = new THREE.Matrix4().setMatrix3(rotation.transpose()).setPosition(position);
     var matrixInverse = new THREE.Matrix4().getInverse(camera.matrix);
     camera.mp2t = camera.textureMatrix.clone().multiply(matrixInverse);
@@ -62,37 +64,47 @@ function parseCalibration(calibration, options) {
 }
 
 
-function getTransfoLocalToPanoStereopolis2(roll, pitch, heading) {
-    const euler = new THREE.Euler(
-        pitch * Math.PI / 180,
-        roll * Math.PI / 180,
-        heading * Math.PI / 180, 'ZXY');
-    const qLocalToPano = new THREE.Quaternion().setFromEuler(euler);
-    return new THREE.Matrix4().makeRotationFromQuaternion(qLocalToPano);
+function getTransfoLocalToPanoFromRollPitchHeading(roll, pitch, heading) {
+    // const euler = new THREE.Euler(
+    //     pitch * Math.PI / 180,
+    //     roll * Math.PI / 180,
+    //     heading * Math.PI / 180, 'ZXY');
+    // const qLocalToPano = new THREE.Quaternion().setFromEuler(euler);
+    // return new THREE.Matrix4().makeRotationFromQuaternion(qLocalToPano);
+    // The sample code with explicit rotation composition
+    var R = new THREE.Matrix4().makeRotationZ(pitch * Math.PI / 180);
+    R.multiply(new THREE.Matrix4().makeRotationY(roll * Math.PI / 180));
+    R.multiply(new THREE.Matrix4().makeRotationZ(heading * Math.PI / 180));
+    return R;
 }
 
-function getTransfoLocalToPanoMicMac(roll, pitch, heading) {
-    // Omega
-    var o = parseFloat(roll) / 180 * Math.PI;  // Deg to Rad // Axe X
-    // Phi
-    var p = parseFloat(pitch) / 180 * Math.PI;  // Deg to Rad // axe Y
-    // Kappa
-    var k = parseFloat(heading) / 180 * Math.PI;  // Deg to Rad // axe Z
-    // c'est la matrice micmac transposée (surement par erreur)
-    // il l'a ecrite en row major alors que l'ecriture interne est en column major
-    var M4 = new THREE.Matrix4();
-    M4.elements[0] = Math.cos(p) * Math.cos(k);
-    M4.elements[1] = Math.cos(p) * Math.sin(k);
-    M4.elements[2] = -Math.sin(p);
-
-    M4.elements[4] = Math.cos(o) * Math.sin(k) + Math.sin(o) * Math.sin(p) * Math.cos(k);
-    M4.elements[5] = -Math.cos(o) * Math.cos(k) + Math.sin(o) * Math.sin(p) * Math.sin(k);
-    M4.elements[6] = Math.sin(o) * Math.cos(p);
-
-    M4.elements[8] = Math.sin(o) * Math.sin(k) - Math.cos(o) * Math.sin(p) * Math.cos(k);
-    M4.elements[9] = -Math.sin(o) * Math.cos(k) - Math.cos(o) * Math.sin(p) * Math.sin(k);
-    M4.elements[10] = -Math.cos(o) * Math.cos(p);
-    return M4;
+function getTransfoLocalToPanoFromOmegaPhiKappa(omega, phi, kappa) {
+    // From DocMicMac
+    // transfo image to world
+    // M = R(roll / X).R(pitch / Y).R(heading / Z).cv2p
+    // cv2p : conversion from computer vision image coordinate system to photogrammetry image coordinate system
+    // computer vision image coordinate system = line top down
+    // photogrammetry image coordinate system = line bottom up
+    // so for LocalToPano (reverse transformation)
+    // M = trix.[R(roll / X).R(pitch / Y).R(heading / Z)]^-1
+    const cv2p = new THREE.Matrix4().set(
+            1, 0, 0, 0,
+            0, -1, 0, 0,
+            0, 0, -1, 0,
+            0, 0, 0, 1);
+    // const euler = new THREE.Euler(
+    //     roll * Math.PI / 180,
+    //     pitch * Math.PI / 180,
+    //     heading * Math.PI / 180, 'XYZ');
+    // const qPanoToLocal = new THREE.Quaternion().setFromEuler(euler);
+    // const rLocalToPano = (new THREE.Matrix4().makeRotationFromQuaternion(qPanoToLocal)).transpose();
+    // return cv2p.multiply(rLocalToPano);
+    // The sample code with explicit rotation composition
+    var R = new THREE.Matrix4().makeRotationX(omega * Math.PI / 180);
+    R.multiply(new THREE.Matrix4().makeRotationY(phi * Math.PI / 180));
+    R.multiply(new THREE.Matrix4().makeRotationZ(kappa * Math.PI / 180));
+    R.transpose();
+    return cv2p.multiply(R);
 }
 
 function getTransfoGeoCentriqueToLocal(cGeocentrique) {
@@ -106,19 +118,15 @@ function getTransfoGeoCentriqueToLocal(cGeocentrique) {
 }
 
 
-function getTransfoLocalToPano(orientationType, roll, pitch, heading) {
-    if (orientationType === 'Stereopolis2') {
-        return getTransfoLocalToPanoStereopolis2(roll, pitch, heading);
-    }
-    else {
-        return getTransfoLocalToPanoMicMac(roll, pitch, heading);
-    }
-}
-
 function getTransfoWorldToPano(orientationType, ori) {
     var worldToLocal = getTransfoGeoCentriqueToLocal(ori.geometry.vertices[0]);
-    var localToPano = getTransfoLocalToPano(orientationType, ori.properties.roll, ori.properties.pitch, ori.properties.heading);
-    return localToPano.multiply(worldToLocal);
+    if ((ori.properties.roll != undefined) && (ori.properties.pitch != undefined) && (ori.properties.heading != undefined)) {
+        return getTransfoLocalToPanoFromRollPitchHeading(ori.properties.roll, ori.properties.pitch, ori.properties.heading).multiply(worldToLocal);
+    }
+    else if ((ori.properties.omega != undefined) && (ori.properties.phi != undefined) && (ori.properties.kappa != undefined)) {
+        return getTransfoLocalToPanoFromOmegaPhiKappa(ori.properties.omega, ori.properties.phi, ori.properties.kappa).multiply(worldToLocal);
+    }
+    return worldToLocal;
 }
 
 
