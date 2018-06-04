@@ -9,6 +9,7 @@ parser.add_argument('pano', help='pano json file')
 parser.add_argument('-o', '--out', help='output geojson file')
 parser.add_argument('-c', '--crs', help='output geojson file', default=2154)
 parser.add_argument('--offset', help='offset', nargs=3, type=float, default=[0, 0, 0])
+parser.add_argument('-opk', help='rename Roll Pitch Heading to Omega Phi Kappa',action='store_true')
 args = parser.parse_args()
 args.out = args.out or (args.pano[:-4]+'geojson')
 
@@ -29,6 +30,10 @@ for p in pano:
 	p['northing'] += offset["y"]
 	p['altitude'] += offset["z"]
 	f = { "type": "Feature", "geometry": { "type": "Point", "coordinates": [p['easting'], p['northing'], p['altitude']]},"properties": {}}
+	if (args.opk):
+		p['omega'] = p.pop('roll')
+		p['phi'] = p.pop('pitch')
+		p['kappa'] = p.pop('heading')
 	f['properties'] = p
 	geojson['features'].append(f)
 
